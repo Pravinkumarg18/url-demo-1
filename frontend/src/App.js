@@ -125,6 +125,39 @@ const Footer = () => (
 /**
  * Main App component
  */
+
+/**
+ * Normalize backend scan results to frontend-friendly format
+ */
+const normalizeResults = (raw) => {
+  if (!raw) return null;
+
+  return {
+    ...raw,
+
+    // 🔴 THIS IS THE MOST IMPORTANT PART
+    vulnerabilities: (raw.findings || []).map((f) => ({
+      rule_id: f.rule_id,
+      severity: f.severity?.toUpperCase(),
+      message: f.description,
+      file: f.file_path,
+      line: f.line_number,
+      column: f.column_number,
+      code_snippet: f.code_snippet?.code || f.code_snippet,
+      recommendation: f.remediation,
+      cwe_id: f.cwe_id,
+      owasp_category: f.owasp_category,
+    })),
+
+    metadata: {
+      scan_duration: raw.scan_time,
+      files_scanned: raw.files_scanned,
+      rules_applied: raw.findings?.length,
+      source_url: raw.source_url,
+    },
+  };
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState('file');
   const [results, setResults] = useState(null);
@@ -187,8 +220,12 @@ function App() {
       <main style={{ flex: 1 }}>
         {/* Show results if available, otherwise show scan interface */}
         {results ? (
-          <Results results={results} onClear={handleClearResults} />
-        ) : (
+  <Results
+    results={normalizeResults(results)}
+    onClear={handleClearResults}
+  />
+) : (
+
           <>
             {/* Tab navigation */}
             <div
