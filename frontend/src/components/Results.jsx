@@ -269,7 +269,7 @@ const Results = ({ results, onClear }) => {
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const vulnerabilities = results?.findings || [];
+  const vulnerabilities = results?.vulnerabilities || [];
   const severitySummary = results?.severity_summary?.by_severity || {};
 
 

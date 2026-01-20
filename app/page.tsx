@@ -52,13 +52,14 @@ const URL_PATTERN = /^https?:\/\/[^\s/$.?#].[^\s]*$/i;
 // Types
 interface Vulnerability {
   rule_id: string;
+  rule_name: string;
+  description: string;
   severity: string;
-  message: string;
-  file: string;
-  line: number;
-  column: number;
-  code_snippet?: string;
-  recommendation?: string;
+  file_path: string;
+  line_number: number;
+  column_number: number;
+  code_snippet?: any;
+  remediation?: string;
   cwe_id?: string;
   owasp_category?: string;
 }
@@ -71,7 +72,7 @@ interface ScanMetadata {
 }
 
 interface ScanResults {
-  vulnerabilities: Vulnerability[];
+  findings: Vulnerability[];
   metadata?: ScanMetadata;
 }
 
@@ -170,7 +171,7 @@ const StatCard = ({ label, value, color }: { label: string; value: number; color
 );
 
 const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }: { vulnerability: Vulnerability; isExpanded: boolean; onToggle: () => void }) => {
-  const { rule_id, severity, message, file, line, column, code_snippet, recommendation, cwe_id, owasp_category } = vulnerability;
+  const { rule_id, rule_name, description, severity, file_path, line_number, column_number, code_snippet, remediation, cwe_id, owasp_category } = vulnerability;
 
   return (
     <div className="bg-card border border-border rounded-lg mb-3 overflow-hidden">
@@ -178,8 +179,8 @@ const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }: { vulnerabil
         <div className="flex items-center gap-3 flex-1">
           <SeverityBadge severity={severity} />
           <div className="flex-1">
-            <div className="font-semibold text-foreground mb-1">{rule_id}</div>
-            <div className="text-sm text-muted-foreground">{file}:{line}:{column}</div>
+            <div className="font-semibold text-foreground mb-1">{rule_name || rule_id}</div>
+            <div className="text-sm text-muted-foreground">{file_path}:{line_number}:{column_number}</div>
           </div>
         </div>
         <svg className={`w-5 h-5 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,18 +191,25 @@ const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }: { vulnerabil
         <div className="px-4 pb-4 border-t border-border">
           <div className="mt-4">
             <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Description</h4>
-            <p className="text-foreground leading-relaxed">{message}</p>
+            <p className="text-foreground leading-relaxed">{description}</p>
           </div>
           {code_snippet && (
             <div className="mt-4">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Code Snippet</h4>
-              <pre className="bg-primary text-primary-foreground p-3 rounded-md text-sm font-mono overflow-auto whitespace-pre-wrap break-words">{code_snippet}</pre>
+              <pre className="bg-primary text-primary-foreground p-3 rounded-md text-sm font-mono overflow-auto whitespace-pre-wrap break-words">
+                {typeof code_snippet === 'object' && code_snippet.lines
+                  ? code_snippet.lines.map((line: any) => `${line.line_number}: ${line.content}`).join('\n')
+                  : typeof code_snippet === 'string'
+                  ? code_snippet
+                  : JSON.stringify(code_snippet, null, 2)
+                }
+              </pre>
             </div>
           )}
-          {recommendation && (
+          {remediation && (
             <div className="mt-4">
               <h4 className="text-xs font-semibold text-muted-foreground mb-2 uppercase">Recommendation</h4>
-              <p className="text-foreground leading-relaxed">{recommendation}</p>
+              <p className="text-foreground leading-relaxed">{remediation}</p>
             </div>
           )}
           <div className="mt-4 flex gap-4 flex-wrap">
@@ -243,9 +251,16 @@ const Results = ({ results, onClear }: { results: ScanResults; onClear: () => vo
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Expand all cards by default when results are loaded
+  React.useEffect(() => {
+    if (results?.findings) {
+      setExpandedIds(new Set(results.findings.map((_, i) => i)));
+    }
+  }, [results]);
+
   const stats = React.useMemo(() => {
-    if (!results?.vulnerabilities) return { total: 0, critical: 0, high: 0, medium: 0, low: 0, info: 0 };
-    return results.vulnerabilities.reduce(
+    if (!results?.findings) return { total: 0, critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    return results.findings.reduce(
       (acc, vuln) => {
         acc.total++;
         const severity = vuln.severity?.toUpperCase() || "INFO";
@@ -258,12 +273,12 @@ const Results = ({ results, onClear }: { results: ScanResults; onClear: () => vo
   }, [results]);
 
   const filteredVulnerabilities = React.useMemo(() => {
-    if (!results?.vulnerabilities) return [];
-    return results.vulnerabilities.filter((vuln) => {
+    if (!results?.findings) return [];
+    return results.findings.filter((vuln) => {
       if (activeFilter !== "ALL" && vuln.severity?.toUpperCase() !== activeFilter) return false;
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return vuln.rule_id?.toLowerCase().includes(query) || vuln.message?.toLowerCase().includes(query) || vuln.file?.toLowerCase().includes(query);
+        return vuln.rule_id?.toLowerCase().includes(query) || vuln.description?.toLowerCase().includes(query) || vuln.file_path?.toLowerCase().includes(query);
       }
       return true;
     });
