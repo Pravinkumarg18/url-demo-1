@@ -241,6 +241,7 @@ const FileScan = ({ onScanComplete }) => {
 
       setStatus('Scan complete!');
       setProgress(100);
+      console.log("SCAN API RESPONSE:", results);
       onScanComplete(results);
     } catch (err) {
       setError(err.message || 'Scan failed. Please try again.');

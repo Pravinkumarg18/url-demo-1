@@ -12,7 +12,8 @@ import { SEVERITY_LEVELS } from '../config';
  * Severity badge component
  */
 const SeverityBadge = ({ severity }) => {
-  const config = SEVERITY_LEVELS[severity] || SEVERITY_LEVELS.INFO;
+  const config = SEVERITY_LEVELS[severity?.toUpperCase()] || SEVERITY_LEVELS.INFO;
+
   
   return (
     <span
@@ -121,8 +122,9 @@ const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }) => {
               {rule_id}
             </div>
             <div style={{ fontSize: '14px', color: '#6b7280' }}>
-              {file}:{line}:{column}
-            </div>
+  {file_path}:{line_number}:{column_number}
+</div>
+
           </div>
         </div>
         <svg
@@ -149,7 +151,7 @@ const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }) => {
             <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
               Description
             </h4>
-            <p style={{ color: '#374151', lineHeight: '1.5' }}>{message}</p>
+            <p style={{ color: '#374151', lineHeight: '1.5' }}>{description}</p>
           </div>
 
           {/* Code snippet */}
@@ -159,30 +161,38 @@ const VulnerabilityCard = ({ vulnerability, isExpanded, onToggle }) => {
                 Code Snippet
               </h4>
               <pre
-                style={{
-                  backgroundColor: '#1f2937',
-                  color: '#f3f4f6',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontFamily: 'monospace',
-                  overflow: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {code_snippet}
-              </pre>
+  style={{
+    backgroundColor: '#1f2937',
+    color: '#f3f4f6',
+    padding: '12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontFamily: 'monospace',
+    overflow: 'auto',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+  }}
+>
+  {code_snippet?.lines
+    ?.map(line =>
+  line.is_highlighted
+    ? `>> ${line.line_number}: ${line.content}`
+    : `   ${line.line_number}: ${line.content}`
+)
+
+    .join('\n')}
+</pre>
+
             </div>
           )}
 
           {/* Recommendation */}
-          {recommendation && (
+          {remediation && (
             <div style={{ marginTop: '16px' }}>
               <h4 style={{ fontSize: '12px', fontWeight: '600', color: '#6b7280', marginBottom: '8px', textTransform: 'uppercase' }}>
                 Recommendation
               </h4>
-              <p style={{ color: '#374151', lineHeight: '1.5' }}>{recommendation}</p>
+              <p style={{ color: '#374151', lineHeight: '1.5' }}>{remediation}</p>
             </div>
           )}
 
@@ -264,8 +274,7 @@ const Results = ({ results, onClear }) => {
 
 
   // Calculate statistics
-  const stats = useMemo(() => {
-    const stats = useMemo(() => {
+ const stats = useMemo(() => {
   return {
     total: results?.total_findings || vulnerabilities.length,
     critical: severitySummary.critical || 0,
@@ -276,19 +285,6 @@ const Results = ({ results, onClear }) => {
   };
 }, [results, vulnerabilities, severitySummary]);
 
-
-    return results.vulnerabilities.reduce(
-      (acc, vuln) => {
-        acc.total++;
-        const severity = vuln.severity?.toUpperCase() || 'INFO';
-        if (acc[severity.toLowerCase()] !== undefined) {
-          acc[severity.toLowerCase()]++;
-        }
-        return acc;
-      },
-      { total: 0, critical: 0, high: 0, medium: 0, low: 0, info: 0 }
-    );
-  }, [results]);
 
   // Filter vulnerabilities
   const filteredVulnerabilities = useMemo(() => {
@@ -305,15 +301,17 @@ const Results = ({ results, onClear }) => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         return (
-          vuln.rule_id?.toLowerCase().includes(query) ||
-          vuln.message?.toLowerCase().includes(query) ||
-          vuln.file?.toLowerCase().includes(query)
-        );
+  vuln.rule_id?.toLowerCase().includes(query) ||
+  vuln.description?.toLowerCase().includes(query) ||
+  vuln.file_path?.toLowerCase().includes(query)
+);
+
       }
 
       return true;
     });
-  }, [results, activeFilter, searchQuery]);
+  }, [vulnerabilities, activeFilter, searchQuery]);
+
 
   // Toggle expanded state
   const toggleExpanded = (id) => {

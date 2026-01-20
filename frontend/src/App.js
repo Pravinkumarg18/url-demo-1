@@ -164,8 +164,10 @@ function App() {
 
   // Handle scan completion
   const handleScanComplete = useCallback((scanResults) => {
-    setResults(scanResults);
-  }, []);
+  console.log("RAW BACKEND RESPONSE:", scanResults);
+  setResults(scanResults);
+}, []);
+
 
   // Clear results and start new scan
   const handleClearResults = useCallback(() => {
